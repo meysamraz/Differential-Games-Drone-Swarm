@@ -22,6 +22,7 @@ To teleop a single drone
 """
 
 import os
+import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess, TimerAction
@@ -43,11 +44,8 @@ CTRL_DELAY     = 8.0   # s  – controllers start after all drones are spawned
 
 def generate_launch_description():
     pkg        = get_package_share_directory('drone_swarm')
-    urdf_path  = os.path.join(pkg, 'urdf', 'quadrotor.urdf')
+    xacro_path = os.path.join(pkg, 'urdf', 'quadrotor.urdf.xacro')
     world_path = os.path.join(pkg, 'worlds', 'drone_world.world')
-
-    with open(urdf_path, 'r') as f:
-        base_urdf = f.read()
 
     actions = []
 
@@ -66,11 +64,11 @@ def generate_launch_description():
         ns = drone['ns']
         x, y, z = drone['x'], drone['y'], drone['z']
 
-        # Replace the single placeholder namespace in both plugins at once
-        drone_urdf = base_urdf.replace(
-            '<namespace>/drone</namespace>',
-            f'<namespace>/{ns}</namespace>'
-        )
+        # xacro processes the template and injects the namespace for this drone
+        drone_urdf = xacro.process_file(
+            xacro_path,
+            mappings={'drone_ns': ns}
+        ).toxml()
 
         # Robot state publisher (publishes /{ns}/robot_description for the spawner)
         actions.append(Node(

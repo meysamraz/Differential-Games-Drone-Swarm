@@ -1,0 +1,71 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ============================================================
+       BASE LINK – drone body, arms (visual), motor mounts (visual).
+       Requires: properties, materials, inertia_macros (loaded first).
+       ============================================================ -->
+  <link name="base_link">
+
+    <xacro:box_inertia m="${body_m}" x="${body_x}" y="${body_y}" z="${body_z}"/>
+
+    <!-- ── body box ── -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${body_x} ${body_y} ${body_z}"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="${body_x} ${body_y} ${body_z}"/></geometry>
+    </collision>
+
+    <!-- ── four arms (visual only, fixed to body) ── -->
+    <visual>
+      <origin xyz=" ${arm_len/2+body_x/4} 0 0"/>
+      <geometry><box size="${arm_len/2} ${arm_w} ${arm_w}"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <visual>
+      <origin xyz="-${arm_len/2+body_x/4} 0 0"/>
+      <geometry><box size="${arm_len/2} ${arm_w} ${arm_w}"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0  ${arm_len/2+body_y/4} 0"/>
+      <geometry><box size="${arm_w} ${arm_len/2} ${arm_w}"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0 -${arm_len/2+body_y/4} 0"/>
+      <geometry><box size="${arm_w} ${arm_len/2} ${arm_w}"/></geometry>
+      <material name="grey"/>
+    </visual>
+
+    <!-- ── motor mounts at arm tips (visual only) ── -->
+    <visual>
+      <origin xyz=" ${arm_len} 0          ${mount_z}"/>
+      <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="-${arm_len} 0          ${mount_z}"/>
+      <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0           ${arm_len} ${mount_z}"/>
+      <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0          -${arm_len} ${mount_z}"/>
+      <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+
+  </link>
+
+  <gazebo reference="base_link"><material>Gazebo/DarkGrey</material></gazebo>
+
+</robot>

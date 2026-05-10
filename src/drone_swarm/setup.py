@@ -1,5 +1,6 @@
 from setuptools import find_packages, setup
 import glob
+import os
 
 package_name = 'drone_swarm'
 
@@ -11,7 +12,10 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/urdf',   glob.glob('urdf/*')),
+        ('share/' + package_name + '/urdf',
+            [f for f in glob.glob('urdf/*') if os.path.isfile(f)]),
+        ('share/' + package_name + '/urdf/parts',
+            glob.glob('urdf/parts/*')),
         ('share/' + package_name + '/launch', glob.glob('launch/*')),
         ('share/' + package_name + '/worlds', glob.glob('worlds/*')),
     ],

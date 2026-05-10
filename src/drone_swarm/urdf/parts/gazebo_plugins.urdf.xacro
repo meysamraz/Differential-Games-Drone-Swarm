@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ============================================================
+       GAZEBO PLUGINS MACRO
+         ns : ROS namespace string (e.g. "drone1")
+       Instantiate once per robot in the top-level xacro.
+       ============================================================ -->
+  <xacro:macro name="gazebo_plugins" params="ns">
+
+    <!-- Force input: geometry_msgs/Wrench on /{ns}/cmd_force -->
+    <gazebo>
+      <plugin name="gazebo_ros_force" filename="libgazebo_ros_force.so">
+        <ros>
+          <namespace>/${ns}</namespace>
+          <remapping>gazebo_ros_force:=cmd_force</remapping>
+        </ros>
+        <link_name>base_link</link_name>
+        <force_frame>world</force_frame>
+      </plugin>
+    </gazebo>
+
+    <!-- Ground-truth odometry: nav_msgs/Odometry on /{ns}/odom -->
+    <gazebo>
+      <plugin name="drone_p3d" filename="libgazebo_ros_p3d.so">
+        <ros>
+          <namespace>/${ns}</namespace>
+          <remapping>odom:=odom</remapping>
+        </ros>
+        <body_name>base_link</body_name>
+        <frame_name>world</frame_name>
+        <update_rate>100.0</update_rate>
+        <xyz_offset>0 0 0</xyz_offset>
+        <rpy_offset>0 0 0</rpy_offset>
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ============================================================
+       ROTOR MACRO
+         name     : link/joint name prefix  (e.g. rotor_front)
+         px, py   : XY offset from base_link centre
+         rviz_mat : URDF material name      ("red" or "blue")
+         gz_mat   : Gazebo material name    ("Red" or "Blue")
+       Requires: properties, inertia_macros (loaded first).
+       ============================================================ -->
+  <xacro:macro name="rotor" params="name px py rviz_mat gz_mat">
+
+    <link name="${name}">
+      <xacro:cylinder_inertia m="${rotor_m}" r="${rotor_r}" h="${rotor_h}"/>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="${rotor_r}" length="${rotor_h}"/></geometry>
+        <material name="${rviz_mat}"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><cylinder radius="${rotor_r}" length="${rotor_h}"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/>
+      <child  link="${name}"/>
+      <origin xyz="${px} ${py} ${rotor_z}" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="${name}"><material>Gazebo/${gz_mat}</material></gazebo>
+
+  </xacro:macro>
+
+</robot>

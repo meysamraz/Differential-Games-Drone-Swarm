@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ============================================================
+       Physical properties – change values here, everything else
+       reacts automatically.
+       ============================================================ -->
+
+  <!-- Body -->
+  <xacro:property name="body_m"  value="1.0"/>   <!-- kg -->
+  <xacro:property name="body_x"  value="0.24"/>  <!-- m -->
+  <xacro:property name="body_y"  value="0.24"/>
+  <xacro:property name="body_z"  value="0.06"/>
+
+  <!-- Arms (visual only, embedded in base_link) -->
+  <xacro:property name="arm_w"   value="0.022"/>  <!-- arm cross-section -->
+  <xacro:property name="arm_len" value="0.26"/>   <!-- rotor offset from centre -->
+
+  <!-- Rotors -->
+  <xacro:property name="rotor_m" value="0.01"/>   <!-- kg -->
+  <xacro:property name="rotor_r" value="0.10"/>   <!-- radius, m -->
+  <xacro:property name="rotor_h" value="0.008"/>  <!-- thickness, m -->
+  <xacro:property name="rotor_z" value="0.048"/>  <!-- height above base_link origin -->
+
+  <!-- Motor mounts (visual only, embedded in base_link) -->
+  <xacro:property name="mount_r" value="0.018"/>
+  <xacro:property name="mount_h" value="0.040"/>
+  <xacro:property name="mount_z" value="0.025"/>
+
+</robot>

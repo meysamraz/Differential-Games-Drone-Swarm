@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<robot name="quadrotor" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ================================================================
+       TOP-LEVEL ASSEMBLY
+       Pass drone_ns at processing time:
+         single:  xacro quadrotor.urdf.xacro drone_ns:=drone
+         swarm:   xacro quadrotor.urdf.xacro drone_ns:=drone1
+       ================================================================ -->
+  <xacro:arg name="drone_ns" default="drone"/>
+  <xacro:property name="ns" value="$(arg drone_ns)"/>
+
+  <!-- part files -->
+  <xacro:include filename="parts/properties.urdf.xacro"/>
+  <xacro:include filename="parts/materials.urdf.xacro"/>
+  <xacro:include filename="parts/inertia_macros.urdf.xacro"/>
+  <xacro:include filename="parts/base_link.urdf.xacro"/>
+  <xacro:include filename="parts/rotor.urdf.xacro"/>
+  <xacro:include filename="parts/gazebo_plugins.urdf.xacro"/>
+
+  <!-- 4 rotors: front/rear CW (red), left/right CCW (blue) -->
+  <xacro:rotor name="rotor_front" px=" ${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
+  <xacro:rotor name="rotor_rear"  px="-${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
+  <xacro:rotor name="rotor_left"  px=" 0"          py=" ${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
+  <xacro:rotor name="rotor_right" px=" 0"          py="-${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
+
+  <!-- Gazebo plugins (force input + odometry output) -->
+  <xacro:gazebo_plugins ns="${ns}"/>
+
+</robot>

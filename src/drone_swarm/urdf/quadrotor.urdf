@@ -1,0 +1,219 @@
+<?xml version="1.0"?>
+<robot name="quadrotor">
+
+  <!-- ===== MATERIALS ===== -->
+  <material name="dark_grey"><color rgba="0.15 0.15 0.15 1.0"/></material>
+  <material name="grey"><color rgba="0.55 0.55 0.55 1.0"/></material>
+  <material name="red"><color rgba="0.85 0.1 0.1 0.85"/></material>
+  <material name="blue"><color rgba="0.1 0.25 0.85 0.85"/></material>
+
+  <!-- ===== BASE LINK =====
+    box 0.24 x 0.24 x 0.06 m, mass 1.0 kg
+    Ixx = Iyy = m/12*(y²+z²) = 1/12*(0.0576+0.0036) = 0.0051
+    Izz           = m/12*(x²+y²) = 1/12*(0.0576+0.0576) = 0.0096
+  -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.0051" ixy="0.0" ixz="0.0"
+               iyy="0.0051" iyz="0.0"
+               izz="0.0096"/>
+    </inertial>
+
+    <!-- Body -->
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.24 0.24 0.06"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.24 0.24 0.06"/></geometry>
+    </collision>
+
+    <!-- Front arm (+X) -->
+    <visual>
+      <origin xyz="0.185 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.15 0.022 0.022"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <!-- Rear arm (-X) -->
+    <visual>
+      <origin xyz="-0.185 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.15 0.022 0.022"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <!-- Left arm (+Y) -->
+    <visual>
+      <origin xyz="0 0.185 0" rpy="0 0 0"/>
+      <geometry><box size="0.022 0.15 0.022"/></geometry>
+      <material name="grey"/>
+    </visual>
+    <!-- Right arm (-Y) -->
+    <visual>
+      <origin xyz="0 -0.185 0" rpy="0 0 0"/>
+      <geometry><box size="0.022 0.15 0.022"/></geometry>
+      <material name="grey"/>
+    </visual>
+
+    <!-- Motor mounts (small cylinders above arm tips) -->
+    <visual>
+      <origin xyz="0.26 0 0.025" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.018" length="0.04"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="-0.26 0 0.025" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.018" length="0.04"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0 0.26 0.025" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.018" length="0.04"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.26 0.025" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.018" length="0.04"/></geometry>
+      <material name="dark_grey"/>
+    </visual>
+  </link>
+
+  <!-- ===== FRONT ROTOR (CW – red) ===== -->
+  <link name="rotor_front">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <!-- cylinder: Ixx=Iyy=m(3r²+h²)/12, Izz=mr²/2  r=0.1, h=0.008 -->
+      <inertia ixx="0.0000251" ixy="0" ixz="0"
+               iyy="0.0000251" iyz="0"
+               izz="0.000050"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+    </collision>
+  </link>
+  <joint name="rotor_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rotor_front"/>
+    <origin xyz="0.26 0 0.048" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===== REAR ROTOR (CW – red) ===== -->
+  <link name="rotor_rear">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="0.0000251" ixy="0" ixz="0"
+               iyy="0.0000251" iyz="0"
+               izz="0.000050"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+    </collision>
+  </link>
+  <joint name="rotor_rear_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rotor_rear"/>
+    <origin xyz="-0.26 0 0.048" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===== LEFT ROTOR (CCW – blue) ===== -->
+  <link name="rotor_left">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="0.0000251" ixy="0" ixz="0"
+               iyy="0.0000251" iyz="0"
+               izz="0.000050"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+    </collision>
+  </link>
+  <joint name="rotor_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rotor_left"/>
+    <origin xyz="0 0.26 0.048" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===== RIGHT ROTOR (CCW – blue) ===== -->
+  <link name="rotor_right">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="0.01"/>
+      <inertia ixx="0.0000251" ixy="0" ixz="0"
+               iyy="0.0000251" iyz="0"
+               izz="0.000050"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.10" length="0.008"/></geometry>
+    </collision>
+  </link>
+  <joint name="rotor_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="rotor_right"/>
+    <origin xyz="0 -0.26 0.048" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===== GAZEBO PLUGINS ===== -->
+  <!-- Force/torque control plugin – world frame forces so controller is frame-independent -->
+  <gazebo>
+    <plugin name="gazebo_ros_force" filename="libgazebo_ros_force.so">
+      <ros>
+        <namespace>/drone</namespace>
+        <remapping>gazebo_ros_force:=cmd_force</remapping>
+      </ros>
+      <link_name>base_link</link_name>
+      <force_frame>world</force_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- Ground-truth odometry plugin – publishes pose + velocity on /drone/odom -->
+  <gazebo>
+    <plugin name="drone_p3d" filename="libgazebo_ros_p3d.so">
+      <ros>
+        <namespace>/drone</namespace>
+        <remapping>odom:=odom</remapping>
+      </ros>
+      <body_name>base_link</body_name>
+      <frame_name>world</frame_name>
+      <update_rate>100.0</update_rate>
+      <xyz_offset>0 0 0</xyz_offset>
+      <rpy_offset>0 0 0</rpy_offset>
+    </plugin>
+  </gazebo>
+
+  <!-- Gazebo material overrides -->
+  <gazebo reference="base_link"><material>Gazebo/DarkGrey</material></gazebo>
+  <gazebo reference="rotor_front"><material>Gazebo/Red</material></gazebo>
+  <gazebo reference="rotor_rear"><material>Gazebo/Red</material></gazebo>
+  <gazebo reference="rotor_left"><material>Gazebo/Blue</material></gazebo>
+  <gazebo reference="rotor_right"><material>Gazebo/Blue</material></gazebo>
+
+</robot>

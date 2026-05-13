@@ -92,7 +92,7 @@ def _build_msg(key):
 class DroneTeleop(Node):
     def __init__(self):
         super().__init__('drone_teleop')
-        self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
     def run(self):
         print(HELP)

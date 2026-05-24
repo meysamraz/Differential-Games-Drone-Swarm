@@ -28,8 +28,14 @@ setup(
     extras_require={'test': ['pytest']},
     entry_points={
         'console_scripts': [
-            'drone_controller = drone_swarm.drone_controller:main',
-            'drone_teleop     = drone_swarm.drone_teleop:main',
+            'drone_controller      = drone_swarm.drone_controller:main',
+            'drone_teleop          = drone_swarm.drone_teleop:main',
+            'formation_controller  = drone_swarm.formation_controller:main',
+            'wind_node             = drone_swarm.wind_node:main',
+            'wind_controller       = drone_swarm.wind_controller:main',
+            'cost_plotter          = drone_swarm.cost_plotter:main',
+            'formation_ui          = drone_swarm.formation_ui:main',
+            'evader_controller     = drone_swarm.evader_controller:main',
         ],
     },
 )

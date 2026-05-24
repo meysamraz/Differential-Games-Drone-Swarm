@@ -2,9 +2,57 @@
 <sdf version="1.6">
   <world name="drone_world">
 
-    <include><uri>model://ground_plane</uri></include>
-    <include><uri>model://sun</uri></include>
+    <!-- ── Grass plain ground ─────────────────────────────────────────── -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode><mu>100</mu><mu2>50</mu2></ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <cast_shadows>false</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>200 200</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Grass</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    </model>
 
+    <!-- ── Sun (directional light for outdoor look) ───────────────────── -->
+    <light name="sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 100 0 -0.4 0.4</pose>
+      <diffuse>0.9 0.88 0.80 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.2 -0.9</direction>
+    </light>
+
+    <!-- ── Physics ───────────────────────────────────────────────────── -->
     <physics type="ode">
       <real_time_update_rate>1000</real_time_update_rate>
       <max_step_size>0.001</max_step_size>
@@ -24,16 +72,28 @@
       </ode>
     </physics>
 
+    <!-- ── Scene: blue sky, soft ambient, shadows ─────────────────────── -->
     <scene>
-      <sky/>
-      <ambient>0.4 0.4 0.4 1</ambient>
-      <background>0.5 0.7 0.9 1</background>
+      <sky>
+        <clouds>
+          <speed>4</speed>
+          <direction>1.57</direction>
+          <humidity>0.5</humidity>
+          <mean_size>0.5</mean_size>
+          <ambient>0.8 0.8 0.8 1</ambient>
+        </clouds>
+        <sunrise>7</sunrise>
+        <sunset>19</sunset>
+      </sky>
+      <ambient>0.55 0.58 0.60 1</ambient>
+      <background>0.53 0.74 0.92 1</background>
       <shadows>true</shadows>
     </scene>
 
+    <!-- ── Camera: elevated wide view of the formation arena ─────────── -->
     <gui fullscreen="0">
       <camera name="user_camera">
-        <pose>4 -4 2.5 0 0.28 2.36</pose>
+        <pose>0 -18 10 0 0.45 1.57</pose>
         <view_controller>orbit</view_controller>
       </camera>
     </gui>

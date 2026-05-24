@@ -13,7 +13,12 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry><box size="${body_x} ${body_y} ${body_z}"/></geometry>
-      <material name="dark_grey"/>
+      <xacro:if value="${ns == 'evader'}">
+        <material name="ev_black"/>
+      </xacro:if>
+      <xacro:unless value="${ns == 'evader'}">
+        <material name="dark_grey"/>
+      </xacro:unless>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -24,48 +29,61 @@
     <visual>
       <origin xyz=" ${arm_len/2+body_x/4} 0 0"/>
       <geometry><box size="${arm_len/2} ${arm_w} ${arm_w}"/></geometry>
-      <material name="grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_white"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="-${arm_len/2+body_x/4} 0 0"/>
       <geometry><box size="${arm_len/2} ${arm_w} ${arm_w}"/></geometry>
-      <material name="grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_white"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="0  ${arm_len/2+body_y/4} 0"/>
       <geometry><box size="${arm_w} ${arm_len/2} ${arm_w}"/></geometry>
-      <material name="grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_white"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="0 -${arm_len/2+body_y/4} 0"/>
       <geometry><box size="${arm_w} ${arm_len/2} ${arm_w}"/></geometry>
-      <material name="grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_white"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="grey"/></xacro:unless>
     </visual>
 
     <!-- ── motor mounts at arm tips (visual only) ── -->
     <visual>
       <origin xyz=" ${arm_len} 0          ${mount_z}"/>
       <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
-      <material name="dark_grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_black"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="dark_grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="-${arm_len} 0          ${mount_z}"/>
       <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
-      <material name="dark_grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_black"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="dark_grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="0           ${arm_len} ${mount_z}"/>
       <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
-      <material name="dark_grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_black"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="dark_grey"/></xacro:unless>
     </visual>
     <visual>
       <origin xyz="0          -${arm_len} ${mount_z}"/>
       <geometry><cylinder radius="${mount_r}" length="${mount_h}"/></geometry>
-      <material name="dark_grey"/>
+      <xacro:if value="${ns == 'evader'}"><material name="ev_black"/></xacro:if>
+      <xacro:unless value="${ns == 'evader'}"><material name="dark_grey"/></xacro:unless>
     </visual>
 
   </link>
 
-  <gazebo reference="base_link"><material>Gazebo/DarkGrey</material></gazebo>
+  <xacro:if value="${ns == 'evader'}">
+    <gazebo reference="base_link"><material>Gazebo/Black</material></gazebo>
+  </xacro:if>
+  <xacro:unless value="${ns == 'evader'}">
+    <gazebo reference="base_link"><material>Gazebo/DarkGrey</material></gazebo>
+  </xacro:unless>
 
 </robot>

@@ -18,11 +18,19 @@
   <xacro:include filename="parts/rotor.urdf.xacro"/>
   <xacro:include filename="parts/gazebo_plugins.urdf.xacro"/>
 
-  <!-- 4 rotors: front/rear CW (red), left/right CCW (blue) -->
-  <xacro:rotor name="rotor_front" px=" ${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
-  <xacro:rotor name="rotor_rear"  px="-${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
-  <xacro:rotor name="rotor_left"  px=" 0"          py=" ${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
-  <xacro:rotor name="rotor_right" px=" 0"          py="-${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
+  <!-- 4 rotors: formation drones = red/blue; evader = all green -->
+  <xacro:if value="${ns == 'evader'}">
+    <xacro:rotor name="rotor_front" px=" ${arm_len}" py=" 0"          rviz_mat="ev_green" gz_mat="Green"/>
+    <xacro:rotor name="rotor_rear"  px="-${arm_len}" py=" 0"          rviz_mat="ev_green" gz_mat="Green"/>
+    <xacro:rotor name="rotor_left"  px=" 0"          py=" ${arm_len}" rviz_mat="ev_green" gz_mat="Green"/>
+    <xacro:rotor name="rotor_right" px=" 0"          py="-${arm_len}" rviz_mat="ev_green" gz_mat="Green"/>
+  </xacro:if>
+  <xacro:unless value="${ns == 'evader'}">
+    <xacro:rotor name="rotor_front" px=" ${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
+    <xacro:rotor name="rotor_rear"  px="-${arm_len}" py=" 0"          rviz_mat="red"  gz_mat="Red"/>
+    <xacro:rotor name="rotor_left"  px=" 0"          py=" ${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
+    <xacro:rotor name="rotor_right" px=" 0"          py="-${arm_len}" rviz_mat="blue" gz_mat="Blue"/>
+  </xacro:unless>
 
   <!-- Gazebo plugins (force input + odometry output) -->
   <xacro:gazebo_plugins ns="${ns}"/>

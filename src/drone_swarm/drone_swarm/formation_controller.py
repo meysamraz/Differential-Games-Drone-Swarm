@@ -642,6 +642,19 @@ class FormationController(Node):
             fv   = self._follower_v(self.positions[1:].copy(), self.positions[0])
             v[1] = fv[0]
             v[2] = fv[1]
+            # Inter-drone repulsion in pursuit — followers can bunch while trailing
+            for i in range(3):
+                for j in range(3):
+                    if j == i:
+                        continue
+                    diff_ij = self.positions[i] - self.positions[j]
+                    d_ij    = np.linalg.norm(diff_ij)
+                    if 0.05 < d_ij < DRONE_SEP_MIN:
+                        v[i] += K_REPULSE_DRONE * (DRONE_SEP_MIN - d_ij) / d_ij * diff_ij
+                spd = np.linalg.norm(v[i])
+                if spd > V_PURSUIT * 1.5:
+                    v[i] *= V_PURSUIT * 1.5 / spd
+            # Note: no evader exclusion in pursuit — drone1 is supposed to chase it
             self._publish(v)
             return
 
@@ -775,6 +788,27 @@ class FormationController(Node):
         fv     = self._follower_v(pred_f, pred_p1)
         v[1]   = fv[0]
         v[2]   = fv[1]
+
+        # Collision avoidance during formation/transition — applied after the
+        # velocity clip so repulsion always wins over P-control attraction.
+        for i in range(3):
+            # Evader exclusion — treat evader as a moving obstacle
+            if self.evader_pos is not None:
+                diff_ev = self.positions[i] - self.evader_pos
+                d_ev    = np.linalg.norm(diff_ev)
+                if 0.05 < d_ev < SAFETY_RADIUS:
+                    v[i] += K_REPULSE_EV * (SAFETY_RADIUS - d_ev) / d_ev * diff_ev
+            # Inter-drone separation
+            for j in range(3):
+                if j == i:
+                    continue
+                diff_ij = self.positions[i] - self.positions[j]
+                d_ij    = np.linalg.norm(diff_ij)
+                if 0.05 < d_ij < DRONE_SEP_MIN:
+                    v[i] += K_REPULSE_DRONE * (DRONE_SEP_MIN - d_ij) / d_ij * diff_ij
+            spd = np.linalg.norm(v[i])
+            if spd > V_MAX * 1.5:
+                v[i] *= V_MAX * 1.5 / spd
 
         e_leader = np.linalg.norm(self.positions[0] - self.leader_target)
         e_f = [

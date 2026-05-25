@@ -201,4 +201,26 @@ def generate_launch_description():
         )],
     ))
 
+    # Formation UI — opens after formation controller is ready
+    actions.append(TimerAction(
+        period=CTRL_DELAY + 5.0,
+        actions=[Node(
+            package='drone_swarm',
+            executable='formation_ui',
+            name='formation_ui',
+            output='screen',
+        )],
+    ))
+
+    # Cost plotter — opens alongside the UI
+    actions.append(TimerAction(
+        period=CTRL_DELAY + 5.0,
+        actions=[Node(
+            package='drone_swarm',
+            executable='cost_plotter',
+            name='cost_plotter',
+            output='screen',
+        )],
+    ))
+
     return LaunchDescription(actions)

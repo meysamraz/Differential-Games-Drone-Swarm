@@ -45,7 +45,13 @@ FORMATION_OFFSETS = {
     'diamond':  np.array([[-2.0, -3.0  ], [ 2.0, -3.0  ]]),
 }
 
-SURROUND_STRATEGIES = {'triangle_surround', 'line_blockade', 'v_intercept', 'shrinking'}
+SURROUND_STRATEGIES  = {'triangle_surround', 'line_blockade', 'v_intercept', 'shrinking',
+                        'auto_surround'}
+STRATEGIES_ORDERED   = ['triangle_surround', 'line_blockade', 'v_intercept', 'shrinking']
+AUTO_EVAL_INTERVAL   = 3.0   # s  minimax re-evaluation period in auto mode
+V_EVADE_SURROUND     = 0.75  # m/s  evader speed in surround mode (matches evader_controller)
+D_SAFE_ESCAPE        = 5.0   # m   distance at which evader counts as "escaped"
+N_ESCAPE_DIRS        = 72    # angular samples for escape fraction (5° resolution)
 
 DRONE_NS    = ['drone1', 'drone2', 'drone3']
 ROLES       = ['Leader', 'Follower', 'Scout']
@@ -144,6 +150,11 @@ class FormationController(Node):
         # Per-drone initial orbit angles for shrinking (no slot-crossing possible)
         self.orbit_init_angles    = [0.0, 2*math.pi/3, 4*math.pi/3]
 
+        # Auto strategy (Mode B) state
+        self.auto_mode       = False
+        self.auto_last_eval  = 0.0
+        self.auto_scores     = {s: 1.0 for s in STRATEGIES_ORDERED}  # escape fractions
+
         # ── Publishers / Subscribers ───────────────────────────────────────
         for i, ns in enumerate(DRONE_NS):
             self.create_subscription(
@@ -160,6 +171,10 @@ class FormationController(Node):
         # Publishes [R, min_dist, captured(0/1), elapsed_s] during surround mode
         self.status_pub = self.create_publisher(
             Float64MultiArray, '/surround_status', 10
+        )
+        # Publishes [selected_idx, score_tri, score_line, score_v, score_shrink]
+        self.auto_pub = self.create_publisher(
+            Float64MultiArray, '/auto_strategy_scores', 10
         )
 
         self.create_timer(DT, self._loop)
@@ -228,64 +243,164 @@ class FormationController(Node):
             if np.any(np.isnan(self.positions)):
                 self.get_logger().warn('Surround: drones not ready yet.')
                 return
-            self.mode               = 'surround'
-            self.surround_strategy  = cmd
-            self.surround_t0        = time.monotonic()
-            self.captured           = False
-            self.surround_R_captured  = None
-            self.surround_cap_elapsed = None
 
-            # Stable heading for line/V: use evader velocity direction if available,
-            # otherwise point from formation centroid toward evader.
-            speed = np.linalg.norm(self.evader_vel)
-            if speed > 0.1:
-                self.surround_heading = (self.evader_vel / speed).copy()
+            if cmd == 'auto_surround':
+                self.auto_mode = True
+                best, scores   = self._minimax_select()
+                self.auto_scores     = scores
+                self.auto_last_eval  = time.monotonic()
+                self._init_surround(best)
+                self.get_logger().info(
+                    f'AUTO selected → {best}  '
+                    + '  '.join(f'{s[:4]}={v:.2f}' for s, v in scores.items())
+                )
             else:
-                centroid = np.mean(self.positions, axis=0)
-                to_ev    = self.evader_pos - centroid
-                d        = np.linalg.norm(to_ev)
-                self.surround_heading = (to_ev / d) if d > 0.1 else np.array([1.0, 0.0])
+                self.auto_mode = False
+                self._init_surround(cmd)
 
-            # Per-drone orbit angles for shrinking.
-            # Drones often start clustered on one side of the evader (formation
-            # positions), so naively using actual angles gives targets only 20-30°
-            # apart → inter-drone collisions.  Fix: pick 3 evenly-spaced (120°)
-            # orbit lanes and assign each drone to its nearest lane.
-            if cmd == 'shrinking':
-                actual = []
-                for i in range(3):
-                    diff = self.positions[i] - self.evader_pos
-                    d = np.linalg.norm(diff)
-                    actual.append(
-                        math.atan2(diff[1], diff[0]) if d > 0.15
-                        else 2 * math.pi * i / 3
+    # ── Surround strategy initialisation ──────────────────────────────────
+
+    def _init_surround(self, cmd: str):
+        """Initialise all surround state for the given concrete strategy name."""
+        self.mode               = 'surround'
+        self.surround_strategy  = cmd
+        self.surround_t0        = time.monotonic()
+        self.captured           = False
+        self.surround_R_captured  = None
+        self.surround_cap_elapsed = None
+
+        # Stable heading for line/V
+        speed = np.linalg.norm(self.evader_vel)
+        if speed > 0.1:
+            self.surround_heading = (self.evader_vel / speed).copy()
+        else:
+            centroid = np.mean(self.positions, axis=0)
+            to_ev    = self.evader_pos - centroid
+            d        = np.linalg.norm(to_ev)
+            self.surround_heading = (to_ev / d) if d > 0.1 else np.array([1.0, 0.0])
+
+        if cmd == 'shrinking':
+            # Evenly-spaced orbit lanes — avoids clustering collisions
+            actual = []
+            for i in range(3):
+                diff = self.positions[i] - self.evader_pos
+                d    = np.linalg.norm(diff)
+                actual.append(
+                    math.atan2(diff[1], diff[0]) if d > 0.15
+                    else 2 * math.pi * i / 3
+                )
+            best_cost  = float('inf')
+            best_lanes = [2 * math.pi * k / 3 for k in range(3)]
+            for base_idx in range(3):
+                base  = actual[base_idx]
+                lanes = [base + 2 * math.pi * k / 3 for k in range(3)]
+                for perm in permutations(range(3)):
+                    cost = sum(
+                        abs((lanes[perm[d]] - actual[d] + math.pi)
+                            % (2 * math.pi) - math.pi)
+                        for d in range(3)
                     )
-                # Try all 3 phase offsets for evenly-spaced lanes,
-                # pick the one that minimises total angular travel.
-                best_cost = float('inf')
-                for base_idx in range(3):
-                    base = actual[base_idx]
-                    lanes = [base + 2 * math.pi * k / 3 for k in range(3)]
-                    for perm in permutations(range(3)):
-                        cost = sum(
-                            abs((lanes[perm[d]] - actual[d] + math.pi)
-                                % (2 * math.pi) - math.pi)
-                            for d in range(3)
-                        )
-                        if cost < best_cost:
-                            best_cost = cost
-                            best_lanes = [lanes[perm[d]] for d in range(3)]
-                self.orbit_init_angles = best_lanes
-            else:
-                # Slot-based assignment for all other strategies
-                initial_targets = self._surround_slot_positions(0.0)
-                self.slot_assignment = self._assign_slots(initial_targets)
+                    if cost < best_cost:
+                        best_cost  = cost
+                        best_lanes = [lanes[perm[d]] for d in range(3)]
+            self.orbit_init_angles = best_lanes
+        else:
+            initial_targets      = self._surround_slot_positions(0.0)
+            self.slot_assignment = self._assign_slots(initial_targets)
 
-            self.get_logger().info(
-                f'Mode → surround/{cmd}  '
-                f'heading={self.surround_heading.tolist()}  '
-                f'R_init={SURROUND_RADIUS_INIT}'
+        self.get_logger().info(
+            f'Mode → surround/{cmd}  heading={self.surround_heading.tolist()}'
+        )
+
+    # ── Mode-B: minimax game-theoretic strategy selection ─────────────────
+
+    def _minimax_select(self):
+        """
+        Select the capture strategy that minimises the evader's maximum
+        escape probability — a zero-sum minimax argument.
+
+        For each candidate strategy:
+          1. Compute the 3 drone slot positions under that strategy.
+          2. Sample N_ESCAPE_DIRS escape directions from the evader's position.
+          3. For each direction θ, the evader sprints to ev + D_SAFE*[cosθ, sinθ].
+             The nearest-slot drone intercepts only if it can cover the distance
+             ev + D_SAFE*esc_dir in the same time the evader needs (D_SAFE/V_EVADE).
+          4. escape_fraction = fraction of directions where no drone intercepts.
+
+        Return the strategy with the lowest escape fraction (best containment)
+        and all four scores for display.
+        """
+        ev      = self.evader_pos.copy()
+        vel     = self.evader_vel.copy()
+        speed   = np.linalg.norm(vel)
+        heading = vel / speed if speed > 0.1 else np.array([1.0, 0.0])
+
+        scores = {}
+        for s in STRATEGIES_ORDERED:
+            slots  = self._eval_strategy_slots(s, ev, heading)
+            scores[s] = self._escape_fraction(slots, ev)
+
+        best = min(scores, key=scores.get)
+        return best, scores
+
+    def _eval_strategy_slots(self, strategy: str, ev: np.ndarray,
+                             heading: np.ndarray):
+        """
+        Return the 3 ideal slot positions for a strategy evaluated at the
+        current evader position and heading.  Used only for minimax scoring
+        (not for actual control — _surround_slot_positions handles that).
+        """
+        perp   = np.array([-heading[1], heading[0]])
+        R      = SURROUND_RADIUS_INIT
+        spread = LINE_SPREAD_BASE
+
+        if strategy == 'triangle_surround':
+            return [ev + R * np.array([math.cos(2 * math.pi * k / 3),
+                                       math.sin(2 * math.pi * k / 3)])
+                    for k in range(3)]
+
+        elif strategy == 'line_blockade':
+            ahead = ev + (LINE_AHEAD_BASE + R) * heading
+            return [ahead + spread * perp, ahead, ahead - spread * perp]
+
+        elif strategy == 'v_intercept':
+            return [
+                ev + 2.5 * heading,
+                ev - 1.5 * heading + spread * perp,
+                ev - 1.5 * heading - spread * perp,
+            ]
+
+        elif strategy == 'shrinking':
+            # Evaluate with evenly-spaced slots (optimal for shrinking)
+            return [ev + R * np.array([math.cos(2 * math.pi * k / 3),
+                                       math.sin(2 * math.pi * k / 3)])
+                    for k in range(3)]
+
+        return [ev.copy() for _ in range(3)]
+
+    def _escape_fraction(self, slots, ev: np.ndarray) -> float:
+        """
+        Fraction of escape directions (0 = fully contained, 1 = fully open).
+
+        For each sampled direction θ:
+          - Evader escape time = D_SAFE / V_EVADE_SURROUND
+          - Drone i intercept time = |slot_i - escape_pt| / V_SURROUND
+          - Direction is 'blocked' if any drone intercepts in time.
+
+        Lower score = fewer open escape routes = better strategy for pursuers.
+        """
+        t_escape = D_SAFE_ESCAPE / V_EVADE_SURROUND
+        escapes  = 0
+        for k in range(N_ESCAPE_DIRS):
+            theta   = 2 * math.pi * k / N_ESCAPE_DIRS
+            esc_pt  = ev + D_SAFE_ESCAPE * np.array([math.cos(theta), math.sin(theta)])
+            blocked = any(
+                np.linalg.norm(slots[i] - esc_pt) / V_SURROUND <= t_escape
+                for i in range(3)
             )
+            if not blocked:
+                escapes += 1
+        return escapes / N_ESCAPE_DIRS
 
     # ── Surround helpers ───────────────────────────────────────────────────
 
@@ -537,6 +652,21 @@ class FormationController(Node):
 
             elapsed = time.monotonic() - self.surround_t0
 
+            # Auto mode: re-evaluate minimax every AUTO_EVAL_INTERVAL seconds
+            if self.auto_mode and not self.captured:
+                now = time.monotonic()
+                if now - self.auto_last_eval >= AUTO_EVAL_INTERVAL:
+                    best, scores = self._minimax_select()
+                    self.auto_scores    = scores
+                    self.auto_last_eval = now
+                    if best != self.surround_strategy:
+                        self.get_logger().info(
+                            f'AUTO switched {self.surround_strategy} → {best}  '
+                            + '  '.join(f'{s[:4]}={v:.2f}' for s, v in scores.items())
+                        )
+                        self._init_surround(best)
+                        elapsed = 0.0  # reset elapsed after strategy switch
+
             # After capture: freeze R and orbit angle so the cage holds tight
             # while still tracking the evader's position.
             if self.captured and self.surround_R_captured is not None:
@@ -612,6 +742,16 @@ class FormationController(Node):
                 R, metric, 1.0 if self.captured else 0.0, elapsed, threshold
             ]
             self.status_pub.publish(status)
+
+            # Publish auto-strategy scores for UI display
+            if self.auto_mode:
+                sel_idx = (STRATEGIES_ORDERED.index(self.surround_strategy)
+                           if self.surround_strategy in STRATEGIES_ORDERED else 0)
+                auto_msg = Float64MultiArray()
+                auto_msg.data = [float(sel_idx)] + [
+                    self.auto_scores.get(s, 1.0) for s in STRATEGIES_ORDERED
+                ]
+                self.auto_pub.publish(auto_msg)
 
             self.get_logger().info(
                 f'[SURROUND/{self.surround_strategy}]  '

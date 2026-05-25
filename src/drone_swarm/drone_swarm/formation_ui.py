@@ -61,16 +61,27 @@ SURROUND_STRATEGIES = [
 ]
 
 
+STRATEGIES_ORDERED = ['triangle_surround', 'line_blockade', 'v_intercept', 'shrinking']
+STRATEGY_SHORT     = ['Triangle', 'Line', 'V-Shape', 'Shrinking']
+STRATEGY_COLORS    = [TEAL, YELLOW, ORANGE, RED]
+
+
 class UINode(Node):
     def __init__(self):
         super().__init__('formation_ui')
         self.pub = self.create_publisher(String, '/formation_cmd', 10)
-        # Live surround status from formation_controller
+        # Live surround status
         self.surround_R        = None
         self.surround_min_dist = None
         self.captured          = False
         self.create_subscription(
             Float64MultiArray, '/surround_status', self._status_cb, 10
+        )
+        # Auto strategy scores: [selected_idx, score0..3]
+        self.auto_scores      = [1.0, 1.0, 1.0, 1.0]
+        self.auto_selected    = -1   # -1 = auto not active
+        self.create_subscription(
+            Float64MultiArray, '/auto_strategy_scores', self._auto_cb, 10
         )
 
     def send(self, cmd: str):
@@ -85,6 +96,11 @@ class UINode(Node):
             self.surround_min_dist = msg.data[1]
             self.captured          = (msg.data[2] > 0.5)
 
+    def _auto_cb(self, msg):
+        if len(msg.data) >= 5:
+            self.auto_selected = int(msg.data[0])
+            self.auto_scores   = list(msg.data[1:5])
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -94,10 +110,10 @@ def main(args=None):
     spin_thread.start()
 
     # ── Figure ────────────────────────────────────────────────────────────
-    fig = plt.figure(figsize=(9, 10))
+    fig = plt.figure(figsize=(9, 12))
     fig.patch.set_facecolor(BG)
     fig.suptitle('Formation  ·  Pursuit-Evasion  ·  Capture Strategy',
-                 color=TEXT, fontsize=12, fontweight='bold', y=0.985)
+                 color=TEXT, fontsize=12, fontweight='bold', y=0.988)
 
     formation_order = ['triangle', 'line', 'v_shape', 'diamond']
 
@@ -184,7 +200,7 @@ def main(args=None):
                            transform=ax_bar.transAxes)
 
     # ── Status display ────────────────────────────────────────────────────
-    ax_status = fig.add_axes([0.05, 0.360, 0.90, 0.155])
+    ax_status = fig.add_axes([0.05, 0.420, 0.90, 0.130])
     ax_status.set_facecolor(PANEL)
     ax_status.axis('off')
     for sp in ax_status.spines.values():
@@ -211,6 +227,56 @@ def main(args=None):
         transform=ax_status.transAxes,
     )
 
+    # ── Divider: auto strategy ────────────────────────────────────────────
+    fig.text(0.5, 0.406, '─' * 42 + '  AUTO STRATEGY (MINIMAX)  ' + '─' * 6,
+             color=ACCENT, ha='center', fontsize=8)
+
+    # ── AUTO button ───────────────────────────────────────────────────────
+    ax_auto = fig.add_axes([0.05, 0.338, 0.90, 0.060])
+    ax_auto.set_facecolor(PANEL)
+    btn_auto = W.Button(
+        ax_auto,
+        '⚡  AUTO STRATEGY  —  Minimax Game-Theoretic Selection  (re-evaluates every 3 s)',
+        color=PANEL, hovercolor='#1a2a1a',
+    )
+    btn_auto.label.set_color(GREEN)
+    btn_auto.label.set_fontsize(8.5)
+    btn_auto.label.set_fontweight('bold')
+
+    # ── Minimax score panel ───────────────────────────────────────────────
+    # Bars show coverage fraction (1 − escape fraction): longer = better containment.
+    ax_scores = fig.add_axes([0.05, 0.060, 0.90, 0.268])
+    ax_scores.set_facecolor(PANEL)
+    ax_scores.set_xlim(0, 1)
+    ax_scores.set_ylim(-0.5, 3.5)
+    ax_scores.axis('off')
+    for sp in ax_scores.spines.values():
+        sp.set_edgecolor(ACCENT)
+
+    _score_bg_bars = []
+    _score_bars    = []
+    _score_labels  = []
+    _score_pcts    = []
+    for row, (label, color) in enumerate(zip(STRATEGY_SHORT, STRATEGY_COLORS)):
+        y = 3 - row
+        ax_scores.barh(y, 1.0, height=0.55, color=ACCENT, left=0, zorder=1)
+        bg = ax_scores.barh(y, 1.0, height=0.55, color=ACCENT, left=0, zorder=1)[0]  # noqa
+        bar = ax_scores.barh(y, 0.5, height=0.55, color=color,
+                             alpha=0.5, left=0, zorder=2)[0]
+        lbl = ax_scores.text(-0.02, y, label, color=color, ha='right', va='center',
+                              fontsize=8.5, fontweight='bold', fontfamily='monospace')
+        pct = ax_scores.text(0.52, y, '—', color=TEXT, ha='left', va='center',
+                              fontsize=8, fontfamily='monospace')
+        _score_bars.append(bar)
+        _score_labels.append(lbl)
+        _score_pcts.append(pct)
+
+    ax_scores.text(0.5, -0.35, 'Coverage  (fraction of escape directions blocked)',
+                   color=TICK, ha='center', va='center',
+                   fontsize=7.5, fontfamily='monospace', transform=ax_scores.transData)
+
+    auto_active = [False]
+
     current = {'mode': 'triangle', 'surround_cmd': None}
     prev_captured = [False]
 
@@ -223,9 +289,20 @@ def main(args=None):
         fig.canvas.draw_idle()
 
     # ── Formation callbacks ────────────────────────────────────────────────
+    def _reset_auto():
+        auto_active[0] = False
+        node.auto_selected = -1
+        for bar in _score_bars:
+            bar.set_width(0)
+        for lbl in _score_labels:
+            lbl.set_color(TICK)
+        for pct in _score_pcts:
+            pct.set_text('—')
+
     def make_form_cb(name):
         def cb(_):
             node.send(name)
+            _reset_auto()
             current['mode'] = name
             current['surround_cmd'] = None
             status_main.set_text(f'{_FORM_LABELS[name].replace("  ", " ")} FORMATION')
@@ -244,6 +321,29 @@ def main(args=None):
 
     for name, btn in form_btns.items():
         btn.on_clicked(make_form_cb(name))
+
+    # ── AUTO callback ──────────────────────────────────────────────────────
+    def on_auto(_):
+        node.send('auto_surround')
+        auto_active[0] = True
+        current['mode'] = 'auto_surround'
+        current['surround_cmd'] = 'auto_surround'
+        prev_captured[0] = False
+        node.captured = False
+        status_main.set_text('⚡  AUTO STRATEGY  (Minimax)')
+        status_main.set_color(GREEN)
+        status_sub.set_text(
+            'System evaluates escape fraction per strategy  ·  switches every 3 s'
+        )
+        status_sub.set_color(GREEN)
+        status_game.set_text(
+            'min_s  max_θ  P(escape | s, θ)  ·  Isaacs optimal evasion model'
+        )
+        bar_fill.set_width(0)
+        bar_txt.set_text('Surround ring  — auto initialising…')
+        fig.canvas.draw_idle()
+
+    btn_auto.on_clicked(on_auto)
 
     # ── Pursuit callbacks ──────────────────────────────────────────────────
     def on_pursuit(_):
@@ -312,6 +412,7 @@ def main(args=None):
     def make_surround_cb(cmd, color):
         def cb(_):
             node.send(cmd)
+            _reset_auto()
             current['mode'] = cmd
             current['surround_cmd'] = cmd
             prev_captured[0] = False
@@ -333,37 +434,60 @@ def main(args=None):
     for cmd, btn, color in cap_btns:
         btn.on_clicked(make_surround_cb(cmd, color))
 
-    # ── Live update: ring progress + capture flash ─────────────────────────
+    # ── Live update: ring progress + capture flash + auto scores ──────────
     def _animate(_frame):
+        redraw = False
+
+        # Auto strategy score bars
+        if auto_active[0] and node.auto_selected >= 0:
+            sel = node.auto_selected
+            scores = node.auto_scores
+            for row, bar in enumerate(_score_bars):
+                cov = max(0.0, min(1.0, 1.0 - scores[row]))
+                bar.set_width(cov)
+                bar.set_alpha(1.0 if row == sel else 0.45)
+                pct_txt = f'{cov*100:.0f}% covered'
+                if row == sel:
+                    pct_txt = f'▶ {STRATEGY_SHORT[row]}: {pct_txt}  ← ACTIVE'
+                    _score_labels[row].set_color(STRATEGY_COLORS[row])
+                else:
+                    pct_txt = f'   {STRATEGY_SHORT[row]}: {pct_txt}'
+                    _score_labels[row].set_color(TICK)
+                _score_pcts[row].set_text(pct_txt)
+            redraw = True
+
         if current.get('surround_cmd') is None:
+            if redraw:
+                fig.canvas.draw_idle()
             return
 
         if node.captured and not prev_captured[0]:
             prev_captured[0] = True
             status_main.set_text('★  CAPTURED!')
             status_main.set_color(ORANGE)
-            status_sub.set_text(
-                f'Evader neutralised  —  strategy: '
-                f'{SURROUND_LABELS.get(current["surround_cmd"], "?")}'
-            )
+            cmd_key = current['surround_cmd']
+            strat_name = (STRATEGY_SHORT[node.auto_selected]
+                          if cmd_key == 'auto_surround' and node.auto_selected >= 0
+                          else SURROUND_LABELS.get(cmd_key, '?'))
+            status_sub.set_text(f'Evader neutralised  —  strategy: {strat_name}')
             status_sub.set_color(ORANGE)
             bar_fill.set_width(1.0)
             bar_txt.set_text('★  CAPTURE COMPLETE')
-            fig.canvas.draw_idle()
+            redraw = True
 
         elif not node.captured and node.surround_R is not None:
             R = node.surround_R
             d = node.surround_min_dist or 0.0
-            # Ring progress: fraction of initial radius consumed
             from drone_swarm.formation_controller import (
                 SURROUND_RADIUS_INIT, SURROUND_RADIUS_MIN
             )
             frac = 1.0 - max(0.0, (R - SURROUND_RADIUS_MIN) /
                              (SURROUND_RADIUS_INIT - SURROUND_RADIUS_MIN))
             bar_fill.set_width(min(frac, 1.0))
-            bar_txt.set_text(
-                f'Ring  R={R:.2f} m   nearest drone={d:.2f} m'
-            )
+            bar_txt.set_text(f'Ring  R={R:.2f} m   nearest drone={d:.2f} m')
+            redraw = True
+
+        if redraw:
             fig.canvas.draw_idle()
 
     ani = animation.FuncAnimation(    # noqa: F841

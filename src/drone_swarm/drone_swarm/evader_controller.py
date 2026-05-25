@@ -31,7 +31,8 @@ JINK_AMP  = 0.50   # m/s  lateral oscillation amplitude
 JINK_FREQ = 0.65   # Hz
 DT        = 0.05   # 20 Hz
 
-SURROUND_CMDS = {'triangle_surround', 'line_blockade', 'v_intercept', 'shrinking'}
+SURROUND_CMDS = {'triangle_surround', 'line_blockade', 'v_intercept', 'shrinking',
+                 'auto_surround'}
 
 
 class EvaderController(Node):

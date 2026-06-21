@@ -402,7 +402,7 @@ vᵢ = −Kᵢ · (pᵢ − target_i)      ← Nash P-control to slot
 | Strategy | Metric | Threshold | Condition |
 |---|---|---|---|
 | Triangle Surround | Triangle area (m²) | 3.5 | Evader inside triangle AND area < threshold |
-| Shrinking Ring | Max angular gap (°) | 135° | Gap < threshold - no open escape arc |
+| Shrinking Ring | Max angular gap (°) | 135° | Gap < threshold; no open escape arc |
 | V Intercept | Wing separation (m) | 3.0 m | Wings close enough to block exit |
 | Line Blockade | Max inter-drone gap (m) | 1.5 m | Line has no traversable gap |
 
@@ -435,8 +435,8 @@ s* = argmin_s  escape_fraction(s)
 
 **Important caveats:**
 - This is a geometric containment heuristic, not an approximation of the HJI value function V(x).
-- The metric assumes a uniform-random evader direction. The actual evader best-responds via gap scoring - a learning evader could exploit this mismatch.
-- The intercept test uses `V_EVADE = 0.75 m/s`; the evader sprints at `1.2 m/s` through large gaps - the model is optimistic during sprints.
+- The metric assumes a uniform-random evader direction. The actual evader best-responds via gap scoring; a learning evader could exploit this mismatch.
+- The intercept test uses `V_EVADE = 0.75 m/s`; the evader sprints at `1.2 m/s` through large gaps; the model is optimistic during sprints.
 
 #### Evader gap escape in surround mode
 
@@ -446,7 +446,7 @@ score(gap) = gap_angle × harmonic_mean(d_left, d_right)
 harmonic_mean = 2 · d_left · d_right / (d_left + d_right)
 ```
 
-Wide gap beside far-away drones scores highest - genuinely safer than a wide gap beside a close drone.
+Wide gap beside far-away drones scores highest, genuinely safer than a wide gap beside a close drone.
 
 Three behavioral states:
 
@@ -469,7 +469,7 @@ Fₓ += N(0,  (MASS · σ / √dt)²)
 Fy += N(0,  (MASS · σ / √dt)²)
 ```
 
-Memoryless white noise - models rotor vibration and aerodynamic turbulence.
+Memoryless white noise, modelling rotor vibration and aerodynamic turbulence.
 Per-drone intensity: `σ = [0.08, 0.15, 0.22]` (Leader most stable, Scout noisiest).
 
 #### Wind (deterministic sinusoidal gusts)
@@ -487,12 +487,12 @@ Gust frequencies ω: [0.8, 0.6, 1.0] rad/s
 Wind is independent per drone (different amplitudes, frequencies, phases).
 `bias_scale` and `gust_scale` are tunable at runtime via `/wind_scale`.
 
-Wind is applied **after** the delay buffer - it acts on the drone regardless of the delayed command.
+Wind is applied **after** the delay buffer; it acts on the drone regardless of the delayed command.
 
 #### Actuation delay
 
 Each drone has a 30 ms actuation delay (`delay_steps = 3` at 100 Hz).
-Implemented as a FIFO deque - the command published 3 cycles ago is what gets applied.
+Implemented as a FIFO deque; the command published 3 cycles ago is what gets applied.
 Compensated in the formation controller by the Smith predictor.
 
 ---
@@ -521,7 +521,7 @@ ros2 launch drone_swarm drone_gazebo.launch.py
 Startup sequence (automated):
 1. Gazebo loads with the drone world
 2. Drones spawn staggered (1.2 s apart) from scattered positions
-3. Controllers start at t = 8 s - drones converge to triangle formation
+3. Controllers start at t = 8 s; drones converge to triangle formation
 4. Formation UI and Cost Plotter open at t = 13 s
 
 **Manual commands** (alternative to the UI):

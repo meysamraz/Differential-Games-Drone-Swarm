@@ -1,0 +1,9 @@
+# ROS2 Humble (Ubuntu 22.04) — install via apt, not pip
+# sudo apt install ros-humble-desktop
+# sudo apt install ros-humble-gazebo-ros-pkgs
+# sudo apt install ros-humble-xacro
+# sudo apt install ros-humble-robot-state-publisher
+
+# Python dependencies (pip)
+rclpy          # comes with ROS2, listed for reference
+numpy

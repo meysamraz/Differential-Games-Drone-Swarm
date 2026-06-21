@@ -502,7 +502,7 @@ Compensated in the formation controller by the Smith predictor.
 **Prerequisites:** ROS2 Humble, Gazebo Classic 11, Python 3.10
 
 ```bash
-cd ~/Desktop/drone_swarm_ws
+cd ~/drone_swarm_ws
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-select drone_swarm
 source install/setup.bash

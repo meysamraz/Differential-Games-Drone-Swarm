@@ -1,4 +1,4 @@
-# Drone Swarm — Differential Games for Multi-Robot Control
+# Drone Swarm: Differential Games for Multi-Robot Control
 
 ROS2 Humble · Gazebo Classic · Python 3.10
 
@@ -13,19 +13,19 @@ A quadrotor swarm that implements two regimes of differential game theory on rea
 
 ![Formation](docs/src/formation.gif)
 
-### Line Blockade — Capture
+### Line Blockade: Capture
 
 ![Line Blockade](docs/src/line_block.gif)
 
-### Triangle Surround — Capture
+### Triangle Surround: Capture
 
 ![Triangle Surround](docs/src/triangle_sourranding.gif)
 
-### Shrinking Ring — Capture
+### Shrinking Ring: Capture
 
 ![Shrinking Ring](docs/src/shrink_ring.gif)
 
-### Auto Minimax Strategy — Adaptive Switching
+### Auto Minimax Strategy: Adaptive Switching
 
 ![Auto Strategy](docs/src/auto_strategy.gif)
 
@@ -44,7 +44,7 @@ It publishes `std_msgs/String` to `/formation_cmd` and subscribes to `/surround_
 
 ### Controls
 
-**Formation section** — four shape buttons with live mini-previews:
+**Formation section** (four shape buttons with live mini-previews):
 
 | Button | Command | Shape |
 |---|---|---|
@@ -60,7 +60,7 @@ It publishes `std_msgs/String` to `/formation_cmd` and subscribes to `/surround_
 | RETURN TO FORMATION | `return` | Abort pursuit/surround, re-enter last formation |
 | Pursuit (send via terminal) | `pursuit` | drone1 chases; drone2+3 trail in Nash formation |
 
-**Capture Strategy section** — four surround geometries:
+**Capture Strategy section** (four surround geometries):
 
 | Button | Command | Description |
 |---|---|---|
@@ -75,7 +75,7 @@ It publishes `std_msgs/String` to `/formation_cmd` and subscribes to `/surround_
 |---|---|---|
 | AUTO STRATEGY | `auto_surround` | Minimax selects and switches strategy every 3 s |
 
-The status panel shows the active mode, Nash gains, Smith predictor state, and — on capture — a `CAPTURED` flash with the winning strategy name.
+The status panel shows the active mode, Nash gains, Smith predictor state, and, on capture, a `CAPTURED` flash with the winning strategy name.
 
 ---
 
@@ -91,7 +91,7 @@ Runs at 10 Hz over a 60-second rolling window.
 | Panel | Signal | Description |
 |---|---|---|
 | 1 | `Jᵢ(t)` | Per-agent Nash cost (position error + coupling penalty) |
-| 2 | `J(t) = ΣJᵢ` | Joint cost — converges to zero at equilibrium |
+| 2 | `J(t) = ΣJᵢ` | Joint cost, converges to zero at equilibrium |
 | 3 | `‖eᵢ‖` | Raw position errors: leader-to-anchor, followers-to-slot |
 
 The gain annotations shown on Panel 1:
@@ -115,7 +115,7 @@ Scout     Q=1.0  γ=0.5   R=0.15  K=3.16
 | Panel | Signal | Description |
 |---|---|---|
 | 1 | `fₛ(t)` | Escape fraction per strategy (auto mode) or ring radius (manual) |
-| 2 | `R(t)` | Surround ring radius — decreasing toward minimum |
+| 2 | `R(t)` | Surround ring radius, decreasing toward minimum |
 | 3 | `min dist` | Minimum drone↔evader distance + capture threshold line |
 
 ---
@@ -193,10 +193,10 @@ Jᵢ = ∫₀^∞  [ Qᵢ · eᵢ²  +  γᵢⱼ · eᵣₑₗ²  +  Rᵢ · u�
 ```
 
 where:
-- `eᵢ = pᵢ − target_i` — position error to own slot
-- `eᵣₑₗ = (pᵢ − pⱼ) − (Δᵢ − Δⱼ)` — **relative-spacing error** to neighbour j
-- `γᵢⱼ` — coupling weight: how much drone i pays for the relative gap being wrong
-- `Rᵢ` — control effort penalty
+- `eᵢ = pᵢ − target_i`: position error to own slot
+- `eᵣₑₗ = (pᵢ − pⱼ) − (Δᵢ − Δⱼ)`: **relative-spacing error** to neighbour j
+- `γᵢⱼ`: coupling weight, how much drone i pays for the relative gap being wrong
+- `Rᵢ`: control effort penalty
 
 The coupling matrix `γ`:
 
@@ -207,11 +207,11 @@ GAMMA = [ 0.0  0.3  0.3 ]   # row i = drone i, col j = coupling to drone j
 ```
 
 `γ` is what makes this a game rather than three independent controllers:
-drone 2 actively corrects its spacing relative to drone 3 — not just its own offset from the leader.
+drone 2 actively corrects its spacing relative to drone 3, not just its own offset from the leader.
 
 #### Solving for Nash gains
 
-System model (single integrator — velocity command controls position directly):
+System model (single integrator, velocity command controls position directly):
 
 ```
 ẋ = u      →     A = 0,  B = 1
@@ -230,7 +230,7 @@ Nash equilibrium means neither agent can reduce its cost by changing its gain un
 
 | Agent | Q | γ | R | K |
 |---|---|---|---|---|
-| Leader (drone1) | 3.0 | — | 0.80 | 1.94 |
+| Leader (drone1) | 3.0 | n/a | 0.80 | 1.94 |
 | Follower (drone2) | 2.0 | 0.5 (→ scout) | 0.40 | 2.50 |
 | Scout (drone3) | 1.0 | 0.5 (→ follower) | 0.15 | 3.16 |
 
@@ -299,20 +299,20 @@ V(x) = value function = optimal time-to-capture from state x
 The `L = 1` running cost makes V decrease at unit rate along the optimal trajectory.
 Solving this PDE over the full state space is computationally intractable in real time.
 
-#### Pursuer — pure pursuit (tractable approximation)
+#### Pursuer: pure pursuit (tractable approximation)
 
 ```
 v_drone1 = V_PURSUIT · (p_evader − p_drone1) / |p_evader − p_drone1|
 ```
 
 Always head directly at the target at maximum speed.
-Net closure rate: `1.3 − 1.1 = 0.2 m/s` — the fundamental tension this approximation exposes.
+Net closure rate: `1.3 − 1.1 = 0.2 m/s`, the fundamental tension this approximation exposes.
 
 Drone2 and drone3 trail in Nash formation behind drone1, covering flanks.
 
-#### Evader — weighted repulsion + Ornstein-Uhlenbeck noise
+#### Evader: weighted repulsion + Ornstein-Uhlenbeck noise
 
-**Base policy — weighted escape direction:**
+**Base policy: weighted escape direction:**
 
 ```
 escape = normalize( Σᵢ  (wᵢ / dᵢ) · (p_evader − pᵢ) )
@@ -323,7 +323,7 @@ weights: drone1 = 3.0 (primary pursuer),  drone2 = drone3 = 1.0
 Closer drones feel more threatening (inverse-distance weighting).
 drone1 is weighted 3× because it is the active pursuer.
 
-**Perturbation — Ornstein-Uhlenbeck process:**
+**Perturbation: Ornstein-Uhlenbeck process:**
 
 ```
 dx = −θ · x · dt + σ · dW
@@ -332,9 +332,9 @@ dx = −θ · x · dt + σ · dW
 σ = 0.25  (noise intensity)
 ```
 
-OU noise is temporally correlated — smooth, realistic lateral jinking that is statistically unpredictable but physically plausible. Not memoryless white noise.
+OU noise is temporally correlated, smooth, realistic lateral jinking that is statistically unpredictable but physically plausible. Not memoryless white noise.
 
-The OU component is projected onto the **perpendicular** of the escape direction — the evader always moves away from pursuers while jinking sideways:
+The OU component is projected onto the **perpendicular** of the escape direction - the evader always moves away from pursuers while jinking sideways:
 
 ```
 v_evader = V_EVADE · escape_dir + ou_lateral · perp_dir
@@ -348,12 +348,12 @@ When single pursuit is insufficient (speed ratio close to 1), 3 drones cooperati
 
 #### Surround slot positions
 
-**Triangle Surround** — equal spacing on a shrinking circle:
+**Triangle Surround:** equal spacing on a shrinking circle:
 ```
 slot_k = p_evader + R(t) · [cos(2π·k/3),  sin(2π·k/3)]     k = 0, 1, 2
 ```
 
-**Line Blockade** — wall perpendicular to evader heading:
+**Line Blockade:** wall perpendicular to evader heading:
 ```
 heading = evader_velocity / |evader_velocity|
 perp    = [−heading.y,  heading.x]
@@ -361,14 +361,14 @@ ahead   = p_evader + (LINE_AHEAD_BASE + R) · heading
 slots   = [ahead + spread·perp,  ahead,  ahead − spread·perp]
 ```
 
-**V Intercept** — tip ahead of evader, wings trailing:
+**V Intercept:** tip ahead of evader, wings trailing:
 ```
 slots = [p_evader + 2.5·heading,
          p_evader − 1.5·heading + spread·perp,
          p_evader − 1.5·heading − spread·perp]
 ```
 
-**Shrinking Ring** — each drone orbits its own lane, radius decreases:
+**Shrinking Ring:** each drone orbits its own lane, radius decreases:
 ```
 R(t)     = max(R_min,  R_init − shrink_rate · t)
            = max(1.5,   2.2    − 0.07 · t)          ← closes in ~10 s
@@ -376,7 +376,7 @@ R(t)     = max(R_min,  R_init − shrink_rate · t)
 target_i = p_evader + R(t) · [cos(θᵢ₀ + ω·t),  sin(θᵢ₀ + ω·t)]
 
 ω = 0.12 rad/s   (orbit rate)
-θᵢ₀ = initial angle for drone i — evenly spaced 120° apart to prevent crossing
+θᵢ₀ = initial angle for drone i, evenly spaced 120° apart to prevent crossing
 ```
 
 #### Optimal slot assignment (Hungarian, brute-force)
@@ -402,7 +402,7 @@ vᵢ = −Kᵢ · (pᵢ − target_i)      ← Nash P-control to slot
 | Strategy | Metric | Threshold | Condition |
 |---|---|---|---|
 | Triangle Surround | Triangle area (m²) | 3.5 | Evader inside triangle AND area < threshold |
-| Shrinking Ring | Max angular gap (°) | 135° | Gap < threshold — no open escape arc |
+| Shrinking Ring | Max angular gap (°) | 135° | Gap < threshold - no open escape arc |
 | V Intercept | Wing separation (m) | 3.0 m | Wings close enough to block exit |
 | Line Blockade | Max inter-drone gap (m) | 1.5 m | Line has no traversable gap |
 
@@ -435,8 +435,8 @@ s* = argmin_s  escape_fraction(s)
 
 **Important caveats:**
 - This is a geometric containment heuristic, not an approximation of the HJI value function V(x).
-- The metric assumes a uniform-random evader direction. The actual evader best-responds via gap scoring — a learning evader could exploit this mismatch.
-- The intercept test uses `V_EVADE = 0.75 m/s`; the evader sprints at `1.2 m/s` through large gaps — the model is optimistic during sprints.
+- The metric assumes a uniform-random evader direction. The actual evader best-responds via gap scoring - a learning evader could exploit this mismatch.
+- The intercept test uses `V_EVADE = 0.75 m/s`; the evader sprints at `1.2 m/s` through large gaps - the model is optimistic during sprints.
 
 #### Evader gap escape in surround mode
 
@@ -446,7 +446,7 @@ score(gap) = gap_angle × harmonic_mean(d_left, d_right)
 harmonic_mean = 2 · d_left · d_right / (d_left + d_right)
 ```
 
-Wide gap beside far-away drones scores highest — genuinely safer than a wide gap beside a close drone.
+Wide gap beside far-away drones scores highest - genuinely safer than a wide gap beside a close drone.
 
 Three behavioral states:
 
@@ -469,7 +469,7 @@ Fₓ += N(0,  (MASS · σ / √dt)²)
 Fy += N(0,  (MASS · σ / √dt)²)
 ```
 
-Memoryless white noise — models rotor vibration and aerodynamic turbulence.
+Memoryless white noise - models rotor vibration and aerodynamic turbulence.
 Per-drone intensity: `σ = [0.08, 0.15, 0.22]` (Leader most stable, Scout noisiest).
 
 #### Wind (deterministic sinusoidal gusts)
@@ -487,12 +487,12 @@ Gust frequencies ω: [0.8, 0.6, 1.0] rad/s
 Wind is independent per drone (different amplitudes, frequencies, phases).
 `bias_scale` and `gust_scale` are tunable at runtime via `/wind_scale`.
 
-Wind is applied **after** the delay buffer — it acts on the drone regardless of the delayed command.
+Wind is applied **after** the delay buffer - it acts on the drone regardless of the delayed command.
 
 #### Actuation delay
 
 Each drone has a 30 ms actuation delay (`delay_steps = 3` at 100 Hz).
-Implemented as a FIFO deque — the command published 3 cycles ago is what gets applied.
+Implemented as a FIFO deque - the command published 3 cycles ago is what gets applied.
 Compensated in the formation controller by the Smith predictor.
 
 ---
@@ -521,7 +521,7 @@ ros2 launch drone_swarm drone_gazebo.launch.py
 Startup sequence (automated):
 1. Gazebo loads with the drone world
 2. Drones spawn staggered (1.2 s apart) from scattered positions
-3. Controllers start at t = 8 s — drones converge to triangle formation
+3. Controllers start at t = 8 s - drones converge to triangle formation
 4. Formation UI and Cost Plotter open at t = 13 s
 
 **Manual commands** (alternative to the UI):

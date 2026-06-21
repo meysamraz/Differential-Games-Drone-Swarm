@@ -1,0 +1,79 @@
+================================================================
+  DRONE SWARM — HOW TO RUN
+================================================================
+
+STEP 1 — Build the package
+----------------------------------------------------------------
+cd ~/Desktop/drone_swarm_ws
+colcon build --packages-select drone_swarm
+
+STEP 2 — Source the workspace
+----------------------------------------------------------------
+source install/setup.bash
+
+STEP 3 — Launch Gazebo + 3 drones + controllers
+----------------------------------------------------------------
+ros2 launch drone_swarm drone_gazebo.launch.py
+
+  Wait until you see 3 drones appear in Gazebo and the terminal
+  prints "Odom received" for each drone before running teleop.
+
+STEP 4 — Open a NEW terminal and run teleop
+----------------------------------------------------------------
+cd ~/Desktop/drone_swarm_ws
+source install/setup.bash
+
+# Control drone1:
+ros2 run drone_swarm drone_teleop --ros-args -r __ns:=/drone1
+
+# Control drone2 (new terminal):
+ros2 run drone_swarm drone_teleop --ros-args -r __ns:=/drone2
+
+# Control drone3 (new terminal):
+ros2 run drone_swarm drone_teleop --ros-args -r __ns:=/drone3
+
+================================================================
+  KEYBOARD CONTROLS
+================================================================
+
+  W / S        →  Altitude UP / DOWN
+  A / D        →  Strafe LEFT / RIGHT
+  ↑ / ↓        →  Forward / Backward
+  ← / →        →  Yaw LEFT / RIGHT
+  Space        →  Stop (hold current position)
+  Ctrl+C       →  Quit teleop
+
+================================================================
+  USEFUL ROS2 DEBUG COMMANDS (optional)
+================================================================
+
+# Check all active topics:
+ros2 topic list
+
+# Monitor drone1 position:
+ros2 topic echo /drone1/odom
+
+# Monitor drone1 force commands:
+ros2 topic echo /drone1/cmd_force
+
+# Check a topic's publisher/subscriber count:
+ros2 topic info /drone1/odom
+
+================================================================
+  NOTES
+================================================================
+
+- Drones spawn at an equilateral triangle (side = 2 m):
+    drone1: (0.0,  0.0)
+    drone2: (2.0,  0.0)
+    drone3: (1.0,  1.73)
+
+- Each drone auto-hovers at 1 m altitude after spawning.
+
+- If Gazebo is slow, wait for Real Time Factor > 0.8 before
+  running teleop.
+
+- To rebuild after code changes:
+    colcon build --packages-select drone_swarm && source install/setup.bash
+
+================================================================

@@ -29,10 +29,6 @@ A quadrotor swarm that implements two regimes of differential game theory on rea
 
 ![Auto Strategy](docs/src/auto_strategy.gif)
 
-### Pursuit-Evasion
-
-`<!-- INSERT VIDEO/GIF -->`
-
 ---
 
 ## GUI Control Panel
